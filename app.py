@@ -4,7 +4,7 @@ from functions import create_list_of_dates, clean_process_create_df, apply_combi
 import io
 
 st.set_page_config(page_title="Neusoft MNL", 
-                   icon=im,
+                   page_icon=im,
                    layout="wide", 
                    initial_sidebar_state="auto", 
                    menu_items=None)
