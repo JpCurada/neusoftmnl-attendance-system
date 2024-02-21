@@ -14,8 +14,6 @@ st.image('images/neusoft_banner.png', use_column_width="auto")
 st.subheader('Attendance ETL Pipeline', divider='grey')
 st.caption("This tool simplifies attendance data management by transforming and loading raw system extracts into clear, understandable, and downloadable table.")
 
-st.markdown('---')
-
 excel_file = st.file_uploader(label="Choose a file:", type="xlsx")
 
 # Read the Excel file using pandas
