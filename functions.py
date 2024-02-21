@@ -1,7 +1,10 @@
 import pandas as pd  # Importing pandas library for data manipulation
 from datetime import datetime, timedelta
+from PIL import Image
 
 pd.options.mode.chained_assignment = None  # Set pandas option to suppress chained assignment warning
+
+im = Image.open("images/neusoft.png")
 
 def create_list_of_dates(df):
     """
