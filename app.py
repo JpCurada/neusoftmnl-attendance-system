@@ -12,7 +12,7 @@ st.set_page_config(page_title="Neusoft MNL",
 st.image('images/neusoft_banner.png', use_column_width="auto")
 
 st.subheader('Attendance ETL Pipeline', divider='grey')
-st.caption("This tool simplifies attendance data management by transforming and loading raw system extracts into clear, understandable, and downloadable table.")
+st.caption("This tool simplifies attendance data management by transforming the raw extracted data and loading it into clear, understandable, and downloadable table.")
 
 excel_file = st.file_uploader(label="Choose a file:", type="xlsx")
 
