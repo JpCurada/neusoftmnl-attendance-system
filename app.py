@@ -11,7 +11,8 @@ st.set_page_config(page_title="Neusoft MNL",
 
 st.image('images/neusoft_banner.png', use_column_width="auto")
 
-st.title("Neusoft MNL — Attendance Data")
+st.subheader('Attendance ETL Pipeline', divider='grey')
+st.caption("This tool simplifies attendance data management by transforming and loading raw system extracts into clear, understandable, and downloadable table.")
 
 st.markdown('---')
 
