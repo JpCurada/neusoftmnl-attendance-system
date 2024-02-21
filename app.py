@@ -1,9 +1,10 @@
 import pandas as pd
 import streamlit as st
-from functions import create_list_of_dates, clean_process_create_df, apply_combined_styles
+from functions import create_list_of_dates, clean_process_create_df, apply_combined_styles, im
 import io
 
 st.set_page_config(page_title="Neusoft MNL", 
+                   icon=im,
                    layout="wide", 
                    initial_sidebar_state="auto", 
                    menu_items=None)
