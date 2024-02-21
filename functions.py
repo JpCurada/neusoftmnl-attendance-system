@@ -4,7 +4,7 @@ from PIL import Image
 
 pd.options.mode.chained_assignment = None  # Set pandas option to suppress chained assignment warning
 
-im = Image.open("images/neusoft.png")
+im = Image.open("images/neusoft_logo.png")
 
 def create_list_of_dates(df):
     """
