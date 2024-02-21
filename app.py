@@ -9,6 +9,8 @@ st.set_page_config(page_title="Neusoft MNL",
                    initial_sidebar_state="auto", 
                    menu_items=None)
 
+st.image('images/neusoft_banner.png', use_column_width="auto")
+
 st.title("Neusoft MNL — Attendance Data")
 
 st.markdown('---')
