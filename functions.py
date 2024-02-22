@@ -55,6 +55,7 @@ def clean_process_create_df(df, generated_dates):
     for index, row in cleaned_df.iloc[:, 6:].iterrows():  # Iterating over rows starting from the 7th column
         for col in row.index:  # Iterating over column indices
             if isinstance(row[col], str):  # Checking if the cell value is a string
+                row[col] = row[col[.replace('外勤', '') # remove the 'field' (system typo(
                 split_row = [val.strip() for val in row[col].split("\n")]  # Splitting the string value by newline and stripping whitespaces
                 if len(split_row) >= 2 and split_row[0] != split_row[-1]:  # Checking if there are multiple values and they are different
                     new_value = f"{split_row[0]} - {split_row[-1]}"  # Combining multiple values with a hyphen
