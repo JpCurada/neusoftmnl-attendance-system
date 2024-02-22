@@ -35,7 +35,7 @@ if excel_file is not None:
 
     # Displaying the new DataFrame with styled cells
     styled_df = cleaned_df.style.map(apply_combined_styles)
-    st.table(styled_df)
+    st.dataframe(styled_df)
 
     # buffer to use for excel writer
     buffer = io.BytesIO()
