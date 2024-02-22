@@ -1,91 +1,169 @@
-import pandas as pd  # Importing pandas library for data manipulation
+import pandas as pd
+import numpy as np
 from datetime import datetime, timedelta
+import warnings
+warnings.filterwarnings("ignore", message="Workbook contains no default style")
 from PIL import Image
+import streamlit as st
 
 pd.options.mode.chained_assignment = None  # Set pandas option to suppress chained assignment warning
 
 im = Image.open("images/neusoft_logo.png")
+master_list = pd.read_csv('master_list.csv')
 
 def create_list_of_dates(df):
     """
-    Extracts the start and end dates from the DataFrame column and generates a list of dates.
+    Create a list of dates from the given DataFrame.
 
-    Args:
-        df (DataFrame): The DataFrame containing the date range.
+    Parameters:
+        df (DataFrame): The DataFrame containing dates.
 
     Returns:
-        list: A list of dates between the start and end dates.
+        list: A list of dates generated from the DataFrame.
     """
-    text = df.columns[0]  # Extracting the date range text from the DataFrame column
-    dates = text.split("：")[1].split(" 至 ")  # Splitting the text to extract start and end dates
-    start_date = dates[0]  # Start date extracted from the split text
-    end_date = dates[1]  # End date extracted from the split text
+    # Extract text from the first column of the DataFrame
+    text = df.columns[0]
+    # Split the text to extract start and end dates
+    dates = text.split("：")[1].split(" 至 ")
+    # Extract start and end dates
+    start_date = dates[0]
+    end_date = dates[1]
 
-    start_date = datetime.strptime(start_date, "%Y-%m-%d")  # Converting start date string to datetime object
-    end_date = datetime.strptime(end_date, "%Y-%m-%d")  # Converting end date string to datetime object
+    # Convert start and end dates to datetime objects
+    start_date = datetime.strptime(start_date, "%Y-%m-%d")
+    end_date = datetime.strptime(end_date, "%Y-%m-%d")
 
-    dates_generated = []  # Initializing list to store generated dates
-
-    # Generating dates between start and end dates
+    # Generate dates between start and end dates
+    dates_generated = []
     while start_date <= end_date:
-        dates_generated.append(start_date.strftime("%Y-%m-%d"))  # Appending formatted date to the list
-        start_date += timedelta(days=1)  # Incrementing start date by one day
+        # Append formatted date to the list
+        dates_generated.append(start_date.strftime("%Y-%m-%d"))
+        # Increment start date by one day
+        start_date += timedelta(days=1)
 
-    return dates_generated  # Returning the list of generated dates
+    return dates_generated
 
-def clean_process_create_df(df, generated_dates):
+@st.cache_data
+def process_attendance_data(df) -> pd.DataFrame:
     """
-    Cleans the DataFrame, processes it, and creates a new DataFrame.
+    Process attendance data from an Excel file.
 
     Args:
-        df (DataFrame): The DataFrame containing the data to be cleaned and processed.
-        generated_dates (list): A list of dates.
+        df (pd.DataFrame): Raw DataFrame
 
     Returns:
-        DataFrame: The new DataFrame after cleaning, processing, and creating.
+        pd.DataFrame: A DataFrame containing the processed data.
     """
-    # Clean DataFrame and apply appropriate column headers
-    num_of_days = [datetime.strptime(date, '%Y-%m-%d').strftime("%d") for date in generated_dates]  # Extracting day numbers from dates
-    columns = ["Name", "Attendance Group", "Department", "Employee Number", "Position", "User ID"]  # Defining column headers
-    columns.extend(num_of_days)  # Extending column headers with day numbers
-    df.columns = columns  # Assigning new column headers to the DataFrame
-    cleaned_df = df[2:]  # Removing unnecessary rows from the DataFrame
 
-    # Process cleaned DataFrame
-    for index, row in cleaned_df.iloc[:, 6:].iterrows():  # Iterating over rows starting from the 7th column
-        for col in row.index:  # Iterating over column indices
-            if isinstance(row[col], str):  # Checking if the cell value is a string
-                row[col] = row[col].replace('外勤', '') # remove the 'field' (system typo)
-                split_row = [val.strip() for val in row[col].split("\n")]  # Splitting the string value by newline and stripping whitespaces
-                if len(split_row) >= 2 and split_row[0] != split_row[-1]:  # Checking if there are multiple values and they are different
-                    new_value = f"{split_row[0]} - {split_row[-1]}"  # Combining multiple values with a hyphen
+    # Generate a list of dates from the dataframe
+    generated_dates = create_list_of_dates(df)
+
+    # Define column headers including the generated dates
+    columns = ["Name", "Attendance Group", "Department", "WB Work Number", "Position", "User ID"]
+    columns.extend(generated_dates)
+
+    # Set the column headers of the dataframe
+    df.columns = columns
+
+    # Get the cleaned dataframe by removing the first two rows
+    cleaned_df = df[2:]
+
+    # Process each row in the dataframe starting from the 7th column (index 6)
+    for index, row in cleaned_df.iloc[:, 6:].iterrows():
+        # Process each cell in the row
+        for col in row.index:
+            # Check if the cell value is a string
+            if isinstance(row[col], str):
+                # Split the string by newline character and remove leading/trailing whitespaces
+                split_row = [val.strip() for val in row[col].split("\n")]
+                # Check if there are at least two elements and the first and last elements are different
+                if len(split_row) >= 2 and split_row[0] != split_row[-1]:
+                    # If conditions met, set the cell value to a range formed by the first and last elements
+                    new_value = f"{split_row[0]} - {split_row[-1]}"
                 else:
-                    new_value = f"Missed Punch ({row[col].strip()})"  # Assigning "Missed Punch" if there's only one value or it's the same
+                    # If conditions not met, set the cell value to "Missed Punch"
+                    new_value = f"Missed Punch ({row[col].strip()})"
+            # Check if the cell value is a float and the corresponding date is Saturday or Sunday
+            elif isinstance(row[col], float) and datetime.strptime(col, '%Y-%m-%d').strftime("%A") in ['Saturday', 'Sunday']:
+                # If the date is weekend, set the cell value to "OFF"
+                new_value = 'OFF'
             else:
-                new_value = "No Log"  # Assigning "No Log" if the cell value is not a string
-            cleaned_df.at[index, col] = new_value  # Assigning the new value to the DataFrame cell
+                # If none of the above conditions are met, set the cell value to "No Log"
+                new_value = "No Log"
+            # Update the cell value in the dataframe
+            cleaned_df.at[index, col] = new_value
 
-    # Create new DataFrame from processed DataFrame
-    new_columns = list(cleaned_df['Name'].unique())  # Extracting unique names from the "Name" column
-    new_columns.insert(0, "Date")  # Inserting "Date" column at the beginning
-    new_columns.insert(1, "Weekday")  # Inserting "Weekday" column after "Date"
-    new_df = pd.DataFrame(columns=new_columns)  # Creating a new DataFrame with specified columns
+    # Define the columns to select
+    columns_to_select = ['Name', 'WB Work Number']
+    # Add the remaining columns (from the 7th column onwards) to the list
+    columns_to_select.extend(cleaned_df.iloc[:, 6:].columns)
 
-    new_df["Date"] = generated_dates  # Assigning generated dates to the "Date" column
-    new_df["Weekday"] = [datetime.strptime(date, '%Y-%m-%d').strftime("%A") for date in generated_dates]  # Extracting weekdays from dates
+    # Select the desired columns from the cleaned dataframe
+    result_df = cleaned_df.loc[:, columns_to_select]
 
-    for name in new_df.columns[1:]:  # Iterating over columns starting from the 2nd column
-        if name in cleaned_df["Name"].values:  # Checking if the name exists in the cleaned DataFrame
-            name_data = cleaned_df[cleaned_df["Name"] == name].iloc[:, 6:].values[0]  # Extracting attendance data for the name
-            new_df[name] = name_data  # Assigning attendance data to the corresponding column in the new DataFrame
+    return result_df
 
-    for index, row in new_df.iterrows():  # Iterating over rows in the new DataFrame
-        for col in row.index:  # Iterating over column indices
-            if row[col] == "No Log" and row["Weekday"] in ["Saturday", "Sunday"]:  # Checking for "No Log" entries on weekends
-                new_value = "OFF"  # Assigning "OFF" for weekends with no log
-                new_df.at[index, col] = new_value  # Assigning the new value to the DataFrame cell
+@st.cache_data
+def merge_master_list(cleaned_df: pd.DataFrame, master_list: pd.DataFrame) -> pd.DataFrame:
+    """
+    Merge data from the master list into the cleaned dataframe.
 
-    return new_df  # Returning the new DataFrame
+    Parameters:
+        cleaned_df (pd.DataFrame): The DataFrame to be cleaned.
+        master_list (pd.DataFrame): The master list DataFrame containing additional data.
+
+    Returns:
+        pd.DataFrame: The cleaned DataFrame with merged data.
+
+    """
+    # Initialize empty lists to store data for new columns
+    employee_name_column = []
+    rag_column = []
+    lob_column = []
+    site_column = []
+    shift_column = []
+
+    # Iterate through each row of the cleaned dataframe
+    for index, row in cleaned_df.iterrows():
+        # Check if the 'WB Work Number' exists in the master list
+        if row['WB Work Number'] in master_list['WB Work Number'].values:
+            # Filter the master list based on matching 'WB Work Number'
+            value = master_list[master_list['WB Work Number'] == row['WB Work Number']]
+            # Extract and append data from the master list to respective columns
+            employee_name_column.append(value['Employee Name'].values[0])
+            rag_column.append(value['RAG'].values[0])
+            lob_column.append(value['LOB'].values[0])
+            shift_column.append(value['Shift'].values[0])
+            site_column.append(value['Site'].values[0])
+        else:
+            # If 'WB Work Number' not found, use data from the current row and fill missing values with NaN
+            employee_name_column.append(row['Name'])
+            rag_column.append(np.nan)
+            lob_column.append(np.nan)
+            shift_column.append(np.nan)
+            site_column.append(np.nan)
+
+    # Add new columns to the cleaned dataframe
+    cleaned_df['Employee Name'] = employee_name_column
+    cleaned_df['RAG'] = rag_column
+    cleaned_df['LOB'] = lob_column
+    cleaned_df['Shift'] = shift_column
+    cleaned_df['Site'] = site_column
+
+    # Define the columns to keep
+    columns_to_select = ['Employee Name', 'LOB', 'Shift', 'Site']
+
+    # Add the remaining columns (from the 7th column onwards) to the selection list
+    columns_to_select.extend(cleaned_df.iloc[:, 2:].columns)
+
+    # Select the desired columns from the dataframe
+    cleaned_df = cleaned_df[columns_to_select]
+
+    # Remove the last 5 columns from the selected dataframe
+    cleaned_df = cleaned_df.iloc[:, :-5]
+
+    return cleaned_df
+
 
 def apply_combined_styles(val):
         """
@@ -102,7 +180,7 @@ def apply_combined_styles(val):
         # Check for 'No Log' or 'OFF' values
         if isinstance(val, str):
 
-            if len(val.split('-')) == 2:
+            if len(val.split('-')) == 2 and val[0].strip().isdigit():
                 start_time_str = val.split('-')[0].strip()
                 end_time_str = val.split('-')[1].strip()
 
@@ -138,3 +216,36 @@ def apply_combined_styles(val):
                 return f'background-color: {background_color}'
             else:
                 pass
+
+def count_no_log(x):
+    return (x == 'No Log').sum()
+
+def count_missed_punch(x):
+    # Check if the value is a string and if 'Missed Punch' is present
+    if isinstance(x, str):
+        return ('Missed Punch' in x)
+    else:
+        return False  # Return False for non-string values
+
+def count_logs(df):
+    # Apply count_no_log function to relevant columns and assign result to 'No Log Count' column
+    df['No Log Count'] = df.iloc[:, 5:].apply(count_no_log, axis=1)
+    
+    # Apply count_missed_punch function to relevant columns and assign result to 'Missed Punch Count' column
+    df['Missed Punch Count'] = df.iloc[:, 5:].applymap(count_missed_punch).sum(axis=1)
+    
+    # Sort and return the DataFrames
+    no_log_sorted = df[['Employee Name', 'No Log Count']].sort_values(by='No Log Count', ascending=False)
+    missed_punch_sorted = df[['Employee Name', 'Missed Punch Count']].sort_values(by='Missed Punch Count', ascending=False)
+    
+    return no_log_sorted, missed_punch_sorted
+
+
+def find_duplicates_by_wb_work_number(df):
+    # Drop rows with null values in 'WB Work Number' column
+    df_cleaned = df.dropna(subset=['WB Work Number'])
+    
+    # Identify duplicated rows based on 'WB Work Number'
+    duplicated_rows = df_cleaned[df_cleaned.duplicated(subset='WB Work Number', keep=False)]
+    
+    return duplicated_rows[['Name', 'WB Work Number']]
