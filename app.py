@@ -53,6 +53,7 @@ if excel_file is not None:
 
     # Example usage:
     no_log_df, missed_punch_df = count_logs(cleaned_df)
+  
 
     col1, col2 = st.columns(2)
 
@@ -82,6 +83,29 @@ if excel_file is not None:
         hide_index=True, 
         use_container_width=True
     )
+
+    # buffer to use for excel writer
+    n_buffer = io.BytesIO()
+
+    with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+        # Write the styled DataFrame to Excel
+        no_log_df.to_excel(writer, sheet_name='no_log', index=False)
+        missed_punch_df.to_excel(writer, sheet_name='missed_punch', index=False)
+
+    # Reset the buffer position
+    n_buffer.seek(0)
+
+    # Provide a download button
+    download = st.download_button(
+        label="Download Data as Excel",
+        data=n_buffer,
+        file_name='neusoft_mnl_attendance_no_log_missed_punch.xlsx',
+        mime='application/vnd.ms-excel'
+    )
+  
+
+    # buffer to use for excel writer
+    buffer = io.BytesIO()
 
     duplicated_rows = find_duplicates_by_wb_work_number(with_wb_num_df)
     if duplicated_rows.shape[0] != 0:
