@@ -49,7 +49,7 @@ if excel_file is not None:
     if site:
         cleaned_df = cleaned_df[cleaned_df['Site'].isin(site)]
     
-    st.subheader(f'No Log and Missed Punch', divider='grey')
+    st.subheader(f'Summary of No Log and Missed Punch', divider='grey')
 
     # Example usage:
     no_log_df, missed_punch_df = count_logs(cleaned_df)
@@ -97,7 +97,7 @@ if excel_file is not None:
 
     # Provide a download button
     download = st.download_button(
-        label="Download Data as Excel",
+        label="Download Summary as Excel",
         data=n_buffer,
         file_name='neusoft_mnl_attendance_no_log_missed_punch.xlsx',
         mime='application/vnd.ms-excel'
