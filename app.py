@@ -87,7 +87,7 @@ if excel_file is not None:
     # buffer to use for excel writer
     n_buffer = io.BytesIO()
 
-    with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+    with pd.ExcelWriter(n_buffer, engine='xlsxwriter') as writer:
         # Write the styled DataFrame to Excel
         no_log_df.to_excel(writer, sheet_name='no_log', index=False)
         missed_punch_df.to_excel(writer, sheet_name='missed_punch', index=False)
