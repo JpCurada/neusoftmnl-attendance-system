@@ -252,10 +252,10 @@ def operate_time(sched_in_time_, sched_out_time_, actual_in_time_, actual_out_ti
   if in_time_difference > timedelta(0):
       codes.append("(L)")  # Late
 
-  if out_time_difference >= min_required_difference and working_duration > sched_duration:
+  if out_time_difference >= min_required_difference: #and working_duration > sched_duration:
       codes.append("(OT)")  # Overtime
 
-  if out_time_difference >= min_required_difference and working_duration < sched_duration:
+  if out_time_difference <= min_required_difference: #and working_duration < sched_duration:
       codes.append("(UT)")  # Undertime
 
   return codes
