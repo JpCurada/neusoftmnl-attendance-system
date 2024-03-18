@@ -1,8 +1,7 @@
 import pandas as pd
 import streamlit as st
-from functions import process_attendance_data, apply_combined_styles, merge_master_list, count_logs, find_duplicates_by_wb_work_number, im, master_list
+from functions import prep_attendance_data, merge_master_list, process_schedule_data, apply_codes, clean_time, add_final_codes, apply_color, count_logs, process_masterlist, im
 import io
-from datetime import datetime
 
 st.set_page_config(page_title="Neusoft MNL", 
                    page_icon=im,
@@ -12,22 +11,38 @@ st.set_page_config(page_title="Neusoft MNL",
 
 st.image('images/neusoft_banner.png', use_column_width="auto")
 
-st.header('Attendance ETL Pipeline', divider='grey')
+st.header('Attendance Pipeline', divider='grey')
 st.write("This tool simplifies attendance data management by transforming the raw extracted data and loading it into clear, understandable, and downloadable table.")
 
-excel_file = st.file_uploader(label="Choose a file:", type="xlsx")
+file_up1, file_up2, file_up3 = st.columns(3)
+excel_file = file_up1.file_uploader(label="Attendance Raw Data:", type="xlsx")
+raw_master_list = file_up2.file_uploader(label="Master List:", type="xlsx")
+schedule_file = file_up3.file_uploader(label="Schedule:", type="xlsx")
+
 
 # Read the Excel file using pandas
-if excel_file is not None:
+if excel_file is not None and raw_master_list is not None and schedule_file is not None:
+
     file_path = pd.ExcelFile(excel_file)
-    df = pd.read_excel(file_path, sheet_name="打卡时间", engine='openpyxl')
+    attendance_raw_df = pd.read_excel(file_path, sheet_name="打卡时间", engine='openpyxl')
+    master_list = process_masterlist(raw_master_list)
+    sched_df = process_schedule_data(schedule_file )
 
-    # Cleaning, processing, and creating a new DataFrame
-    with_wb_num_df = process_attendance_data(df)  
-    cleaned_df = merge_master_list(with_wb_num_df, master_list)
+    
 
-    for col in cleaned_df.columns:
-        cleaned_df[col] = cleaned_df[col].str.replace('外勤','')
+    prep_df = prep_attendance_data(attendance_raw_df)
+    merged_df = merge_master_list(prep_df, master_list)
+    applied_codes_df = apply_codes(merged_df, sched_df)
+
+    applied_codes_df.iloc[:, 9:] = applied_codes_df.iloc[:, 9:].apply(clean_time, axis=1)
+
+    attendance_date_cols = applied_codes_df.columns[9:]
+    for col in attendance_date_cols:
+        applied_codes_df[col] = applied_codes_df[col].str.replace(r'\s+', '', regex=True)
+
+
+    cleaned_df = add_final_codes(applied_codes_df , sched_df)
+
 
     with st.sidebar:
         st.header("Data Filter", divider='grey')
@@ -36,6 +51,8 @@ if excel_file is not None:
         lob = st.multiselect('LOB:', cleaned_df['LOB'].unique(), placeholder='')
         shift = st.multiselect('Shift:', cleaned_df['Shift'].unique(), placeholder='')
         site = st.multiselect('Site:', cleaned_df['Site'].unique(), placeholder='')
+        leader = st.multiselect('Leader:', cleaned_df['Leader'].unique(), placeholder='')
+        employer = st.multiselect('Employer:', cleaned_df['Employer'].unique(), placeholder='')
 
         st.markdown('---')
         st.caption('@Neusoft')
@@ -48,20 +65,23 @@ if excel_file is not None:
         cleaned_df = cleaned_df[cleaned_df['Shift'].isin(shift)]
     if site:
         cleaned_df = cleaned_df[cleaned_df['Site'].isin(site)]
-    
-    st.subheader(f'Summary of No Log and Missed Punch', divider='grey')
+    if leader:
+        cleaned_df = cleaned_df[cleaned_df['Leader'].isin(leader)]
+    if employer:
+        cleaned_df = cleaned_df[cleaned_df['Employer'].isin(employer)]    
+
+    st.subheader(f'Multiple Logs and Missed Punch', divider='grey')
 
     # Example usage:
-    no_log_df, missed_punch_df = count_logs(cleaned_df)
-  
+    multiple_logs_df, missed_punch_df = count_logs(cleaned_df)
 
     col1, col2 = st.columns(2)
 
     col1.data_editor(
-    no_log_df,
+    multiple_logs_df,
     column_config={
-        "No Log Count": st.column_config.ProgressColumn(
-            "No Log Count",
+        "Multiple Logs Count": st.column_config.ProgressColumn(
+            "Multiple Logs Count",
             format="%f Days",
             min_value=0,
             max_value=30,
@@ -84,39 +104,17 @@ if excel_file is not None:
         use_container_width=True
     )
 
-    # buffer to use for excel writer
-    n_buffer = io.BytesIO()
+    # duplicated_rows = find_duplicates_by_wb_work_number(cleaned_df)
+    # if duplicated_rows.shape[0] != 0:
+    #     with st.expander('CHECK OUT: Raw Data Issue'):
+    #         st.write('The Pipeline detected `WB Work Number` duplicates in the uploaded raw data')
+    #         st.dataframe(duplicated_rows)
 
-    with pd.ExcelWriter(n_buffer, engine='xlsxwriter') as writer:
-        # Write the styled DataFrame to Excel
-        no_log_df.to_excel(writer, sheet_name='no_log', index=False)
-        missed_punch_df.to_excel(writer, sheet_name='missed_punch', index=False)
-
-    # Reset the buffer position
-    n_buffer.seek(0)
-
-    # Provide a download button
-    download = st.download_button(
-        label="Download Summary as Excel",
-        data=n_buffer,
-        file_name='neusoft_mnl_attendance_no_log_missed_punch.xlsx',
-        mime='application/vnd.ms-excel'
-    )
-  
-
-    # buffer to use for excel writer
-    buffer = io.BytesIO()
-
-    duplicated_rows = find_duplicates_by_wb_work_number(with_wb_num_df)
-    if duplicated_rows.shape[0] != 0:
-        with st.expander('CHECK OUT: Raw Data Issue'):
-            st.write('The Pipeline detected `WB Work Number` duplicates in the uploaded raw data')
-            st.dataframe(duplicated_rows)
-
-    st.subheader(f"Attendance Data from {datetime.strptime(cleaned_df.columns[4], '%Y-%m-%d').strftime('%B %d, %Y')} to {datetime.strptime(cleaned_df.columns[-3], '%Y-%m-%d').strftime('%B %d, %Y')}", divider='grey')
+    # st.subheader(f"Attendance Data from {datetime.strptime(cleaned_df.columns[4], '%Y-%m-%d').strftime('%B %d, %Y')} to {datetime.strptime(cleaned_df.columns[-3], '%Y-%m-%d').strftime('%B %d, %Y')}", divider='grey')
 
     with st.spinner('Processing'):
-        styled_df = cleaned_df.style.map(apply_combined_styles)
+        date_columns = list(cleaned_df.columns)[9:]
+        styled_df = cleaned_df.style.applymap(apply_color, subset=date_columns)
         
         # buffer to use for excel writer
         buffer = io.BytesIO()
