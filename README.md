@@ -19,11 +19,8 @@ The Neusoft MNL Attendance Management System is a comprehensive Streamlit web ap
 - Visualization: Analyze the processed data through the visualization of multiple logs and missed punches. The application uses progress columns for a clear representation of the data.
 - Download: Finally, download the processed and styled attendance data in Excel format for offline analysis or record-keeping.
 
-
-
-
-## About the Developer
-John Paul Curada
+## Feedback
+If you have any feedback, please reach out to John Paul Curada.
 
 [![linkedin](https://img.shields.io/badge/linkedin-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/jpcurada/)
 
