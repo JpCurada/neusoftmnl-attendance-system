@@ -274,10 +274,10 @@ def add_final_codes(applied_codes_df, sched_df):
               elif isinstance(sched_val, str) and isinstance(attdn_val, str) and sched_val.count(":") == 2 and attdn_val.count(":") == 2:
                   # Convert to datetime objects for time comparisons
 
-                  sched_in_time_dt = datetime.strptime(sched_val[0:7], '%I:%M%p').strftime('%H:%M')
-                  sched_out_time_dt = datetime.strptime(sched_val[8:15], '%I:%M%p').strftime('%H:%M')
-                  actual_in_time_dt = datetime.strptime(attdn_val[0:5], "%H:%M").strftime('%H:%M')
-                  actual_out_time_dt = datetime.strptime(attdn_val[6:11], "%H:%M").strftime('%H:%M')
+                  sched_in_time_dt = sched_val[0:7]
+                  sched_out_time_dt = sched_val[8:15]
+                  actual_in_time_dt = attdn_val[0:5]
+                  actual_out_time_dt = attdn_val[6:11]
 
                   # Call operate_time with datetime objects
                   applicable_codes = operate_time(sched_in_time_dt, sched_out_time_dt, actual_in_time_dt, actual_out_time_dt)
