@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
+import re
 import warnings
 warnings.filterwarnings("ignore", message="Workbook contains no default style")
 from PIL import Image
@@ -324,6 +325,56 @@ def apply_color(x):
             return f'background-color: {color}'
         else:
             return ''
+
+def reformat_df(attendance_df):
+
+  # Prepare a list to hold the formatted data
+  formatted_data = []
+
+  # Regular expression to match time and remarks in parentheses
+  time_re = re.compile(r'(\d{2}:\d{2})(-(\d{2}:\d{2}))?(\(.*\))?')
+
+  # Iterate over each row in the DataFrame
+  for index, row in attendance_df.iterrows():
+      # Extract the employee's name and ID which are constant across the dates
+      employee_name = row['Employee Name']
+      employee_id = row['EmployeeID']
+      
+      # Iterate over each date column to construct individual records
+      for date_column in attendance_df.columns[9:-2]:  # Adjusted to exclude the last two columns
+          # Extract the date from the column name
+          date = pd.to_datetime(date_column).date()
+          # Extract the time information from the cell
+          time_data = row[date_column]
+          
+          # Check if the time data is not NaN
+          if pd.notna(time_data):
+              time_string = str(time_data).strip()
+              match = time_re.match(time_string)
+              if match:
+                  time_in = match.group(1)
+                  time_out = match.group(3) if match.group(3) else None
+                  remarks = match.group(4) if match.group(4) else None
+              else:
+                  # If the format does not match, log the entire string as a remark
+                  time_in, time_out, remarks = None, None, time_string
+
+              # Append the data to the formatted data list
+              formatted_data.append({
+                  'Date': date,
+                  'Employee Name': employee_name,
+                  'Employee ID': employee_id,
+                  'Time In': time_in,
+                  'Time Out': time_out,
+                  'Remarks': remarks
+              })
+
+  # Convert the formatted data into a DataFrame
+  formatted_df = pd.DataFrame(formatted_data)
+
+  return formatted_df
+
+
 
 
 
