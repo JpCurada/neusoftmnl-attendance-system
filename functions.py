@@ -225,38 +225,30 @@ def clean_time(row):
 def compute_duration(start_time, end_time):
     return end_time - start_time
 
-def operate_time(sched_in_time_, sched_out_time_, actual_in_time_, actual_out_time_):
+def operate_time(sched_in_str, sched_out_str, actual_in_str, actual_out_str):
 
+  # Parsing input strings into datetime objects
+  sched_in = datetime.strptime(sched_in_str, "%I:%M%p")
+  sched_out = datetime.strptime(sched_out_str, "%I:%M%p")
+  actual_in = datetime.strptime(actual_in_str, "%H:%M")
+  actual_out = datetime.strptime(actual_out_str, "%H:%M")
+  
+  # Calculating differences in minutes
+  diff_in_minutes = lambda actual, sched: (actual - sched).total_seconds() / 60
+  
   codes = []
-
-  sched_in_time = datetime.strptime(sched_in_time_, "%H:%M")
-  sched_out_time = datetime.strptime(sched_out_time_, "%H:%M")
-
-  # Actual times
-  actual_in_time = datetime.strptime(actual_in_time_, "%H:%M")
-  actual_out_time = datetime.strptime(actual_out_time_, "%H:%M")
-
-
-  # Time differences
-  in_time_difference = actual_in_time - sched_in_time
-  out_time_difference = actual_out_time - sched_out_time
-
-  # Working and scheduled durations
-  working_duration = compute_duration(actual_in_time, actual_out_time)
-  sched_duration = compute_duration(sched_in_time, sched_out_time)
-
-  # Minimum required difference
-  min_required_difference = timedelta(minutes=16)
-
-  # Checking conditions
-  if in_time_difference > timedelta(0):
-      codes.append("(L)")  # Late
-
-  if out_time_difference >= min_required_difference: #and working_duration > sched_duration:
-      codes.append("(OT)")  # Overtime
-
-  if out_time_difference <= min_required_difference: #and working_duration < sched_duration:
-      codes.append("(UT)")  # Undertime
+  
+  # Analyzing check-in status
+  if diff_in_minutes(actual_in, sched_in) <= -16:
+      codes.append("(OT)")
+  elif diff_in_minutes(actual_in, sched_in) >= 1:
+      codes.append("(L)")
+  
+  # Analyzing check-out status
+  if diff_in_minutes(actual_out, sched_out) >= 16:
+      codes.append("(OT)")
+  elif diff_in_minutes(actual_out, sched_out) <= -1:
+      codes.append("(L)")
 
   return codes
 
