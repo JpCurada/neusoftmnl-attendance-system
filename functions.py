@@ -251,7 +251,7 @@ def operate_time(sched_in_str, sched_out_str, actual_in_str, actual_out_str):
   elif diff_in_minutes(actual_out, sched_out) <= -1:
       codes.append("(L)")
 
-  return codes
+  return list(np.unique(codes))
 
 
 def add_final_codes(applied_codes_df, sched_df):
