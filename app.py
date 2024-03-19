@@ -1,6 +1,6 @@
 import pandas as pd
 import streamlit as st
-from functions import prep_attendance_data, merge_master_list, process_schedule_data, apply_codes, clean_time, add_final_codes, apply_color, count_logs, process_masterlist, im
+from functions import prep_attendance_data, merge_master_list, process_schedule_data, apply_codes, clean_time, add_final_codes, apply_color, count_logs, process_masterlist, reformat_df, im
 import io
 
 st.set_page_config(page_title="Neusoft MNL", 
@@ -113,26 +113,52 @@ if excel_file is not None and raw_master_list is not None and schedule_file is n
     # st.subheader(f"Attendance Data from {datetime.strptime(cleaned_df.columns[4], '%Y-%m-%d').strftime('%B %d, %Y')} to {datetime.strptime(cleaned_df.columns[-3], '%Y-%m-%d').strftime('%B %d, %Y')}", divider='grey')
 
     with st.spinner('Processing'):
-        date_columns = list(cleaned_df.columns)[9:]
-        styled_df = cleaned_df.style.applymap(apply_color, subset=date_columns)
+        tab1, tab2 = st.tabs(["Styled", "Organized"])
         
-        # buffer to use for excel writer
-        buffer = io.BytesIO()
+      with tab1:
+          date_columns = list(cleaned_df.columns)[9:]
+          styled_df = cleaned_df.style.applymap(apply_color, subset=date_columns)
+          
+          # buffer to use for excel writer
+          buffer = io.BytesIO()
+  
+          with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+              # Write the styled DataFrame to Excel
+              styled_df.to_excel(writer, sheet_name='Neusoft_MNL_attendance)', index=False)
+  
+          # Reset the buffer position
+          buffer.seek(0)
+  
+          # Displaying the new DataFrame with styled cells
+          st.dataframe(styled_df)
+  
+          # Provide a download button
+          download = st.download_button(
+              label="Download Data as Excel",
+              data=buffer,
+              file_name='neusoft_mnl_attendance.xlsx',
+              mime='application/vnd.ms-excel'
+        )
+        
+      with tab2:
+          organized_df = reformat_df(cleaned_df)
 
-        with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
-            # Write the styled DataFrame to Excel
-            styled_df.to_excel(writer, sheet_name='Neusoft_MNL_attendance)', index=False)
+          # buffer to use for excel writer
+          buffer1 = io.BytesIO()
+  
+          with pd.ExcelWriter(buffer1, engine='xlsxwriter') as writer:
+              # Write the styled DataFrame to Excel
+              organized_df.to_excel(writer, sheet_name='Neusoft Organized Data)', index=False)
+  
+          # Reset the buffer position
+          buffer1.seek(0)
+        
+          st.dataframe(organized_df)
 
-        # Reset the buffer position
-        buffer.seek(0)
-
-        # Displaying the new DataFrame with styled cells
-        st.dataframe(styled_df)
-
-        # Provide a download button
-        download = st.download_button(
-            label="Download Data as Excel",
-            data=buffer,
-            file_name='neusoft_mnl_attendance.xlsx',
-            mime='application/vnd.ms-excel'
+          # Provide a download button
+          download = st.download_button(
+              label="Download Data as Excel",
+              data=buffer1,
+              file_name='neusoft_organized_attendance.xlsx',
+              mime='application/vnd.ms-excel'
         )
