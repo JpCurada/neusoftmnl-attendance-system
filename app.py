@@ -4,7 +4,6 @@ from datetime import datetime
 from functions import CleaningUtils, AnalysisUtils, im
 import plotly.express as px
 import io
-from streamlit_card import card
 
 
 st.set_page_config(page_title="Neusoft MNL", 
