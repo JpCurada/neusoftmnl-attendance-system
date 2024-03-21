@@ -12,6 +12,15 @@ st.set_page_config(page_title="Neusoft MNL",
                    initial_sidebar_state="auto", 
                    menu_items=None)
 
+st.markdown("""
+    <style>
+    .stRadio [role=radiogroup]{
+        align-items: center;
+        justify-content: center;
+    }
+    </style>
+""",unsafe_allow_html=True)
+
 st.image('images/neusoft_banner.png', use_column_width="auto")
 
 st.header('Attendance Data Pipeline', divider='grey')
@@ -54,8 +63,7 @@ if attendance_file is not None and master_list_file is not None and schedule_fil
         m3.metric("Absent Count", absent_count)
         m4.metric("Late Count", late_count)
 
-
-        code = st.radio('Code Status', options=['(MIS)', '(MUL)', '(ABSENT)', '(L)'], horizontal=True)
+        code = st.radio(' ', options=['(MIS)', '(MUL)', '(ABSENT)', '(L)'], horizontal=True)
 
         manager_df = AnalysisUtils.count_codes_per_manager(grouped_df)
         date_df = AnalysisUtils.count_code_per_date(grouped_df)
