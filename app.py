@@ -136,3 +136,7 @@ if attendance_file is not None and master_list_file is not None and schedule_fil
     except KeyError:
         # Handle KeyError
         st.error('Please check the dates within Raw Attendance Data and Schedule Data. They must be compatible or within each other.', icon="🚨")
+    except IndexError:
+        # Handle IndexError
+        st.error('You uploaded a wrong file.', icon="🚨")
+      
