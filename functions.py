@@ -1,413 +1,570 @@
 import pandas as pd
+import plotly.express as px
 import numpy as np
 from datetime import datetime, timedelta
-import re
-import warnings
-warnings.filterwarnings("ignore", message="Workbook contains no default style")
 from PIL import Image
-import streamlit as st
+import re 
 
+import warnings
+warnings.simplefilter("ignore")
 
 pd.options.mode.chained_assignment = None  # Set pandas option to suppress chained assignment warning
 
 im = Image.open("images/neusoft_logo.png")
 
-def process_masterlist(raw_masterlist):
-  df_act = pd.read_excel(raw_masterlist, sheet_name='Active')
-  df_in = pd.read_excel(raw_masterlist, sheet_name='Inactive')
-  concat_df = pd.concat([df_act, df_in], ignore_index=True)
-  df = concat_df[['Employee Name', 'WB Work Number','RAG', 'Work Location', 'Shift', 'Site', 'LOB', 'Employer']]
-  return df
+class CleaningUtils:
 
-def create_list_of_dates(df):
+  @staticmethod
+  def create_master_employee_list(filepath):
     """
-    Create a list of dates from the given DataFrame.
+    This function reads an Excel file containing active and inactive employee data
+    and returns a consolidated DataFrame with specific columns.
 
-    Parameters:
-        df (DataFrame): The DataFrame containing dates.
+    Args:
+        filepath (str): Path to the Excel file containing employee data.
 
     Returns:
-        list: A list of dates generated from the DataFrame.
+        pandas.DataFrame: A DataFrame containing a consolidated list of employees
+                          with specified columns.
     """
-    # Extract text from the first column of the DataFrame
-    text = df.columns[0]
-    # Split the text to extract start and end dates
-    dates = text.split("：")[1].split(" 至 ")
-    # Extract start and end dates
-    start_date = dates[0]
-    end_date = dates[1]
+    # Read active employee data
+    active_df = pd.read_excel(filepath, sheet_name='Active')
 
-    # Convert start and end dates to datetime objects
-    start_date = datetime.strptime(start_date, "%Y-%m-%d")
-    end_date = datetime.strptime(end_date, "%Y-%m-%d")
+    # Read inactive employee data
+    inactive_df = pd.read_excel(filepath, sheet_name='Inactive')
 
-    # Generate dates between start and end dates
-    dates_generated = []
-    while start_date <= end_date:
-        # Append formatted date to the list
-        dates_generated.append(start_date.strftime("%Y-%m-%d"))
-        # Increment start date by one day
-        start_date += timedelta(days=1)
+    # Combine active and inactive dataframes
+    combined_df = pd.concat([active_df, inactive_df], ignore_index=True)
 
-    return dates_generated
+    # Select desired columns
+    employee_df = combined_df[['Employee Name', 'Employee Code (ID)' ,'WB Work Number','RAG', 'Work Location', 'Shift', 'Site', 'LOB', 'Leader','Employer']]
 
-@st.cache_data
-def prep_attendance_data(df):
+    return employee_df
 
-    generated_dates = create_list_of_dates(df)
-
-    sliced_df = df[2:]
-    sliced_df = sliced_df.copy()
-
-    columns = ["Name", "Attendance Group", "Department", "WB Work Number", "Position", "User ID"]
-    columns.extend(generated_dates)
-
-    sliced_df.columns = columns
-
-    return sliced_df
-
-@st.cache_data
-def process_masterlist(raw_masterlist):
-  df_act = pd.read_excel(raw_masterlist, sheet_name='Active')
-  df_in = pd.read_excel(raw_masterlist, sheet_name='Inactive')
-  concat_df = pd.concat([df_act, df_in], ignore_index=True)
-  df = concat_df[['Employee Name', 'Employee Code (ID)' ,'WB Work Number','RAG', 'Work Location', 'Shift', 'Site', 'LOB', 'Leader','Employer']]
-  return df
-
-@st.cache_data
-def merge_master_list(cleaned_df: pd.DataFrame, master_list: pd.DataFrame) -> pd.DataFrame:
+  @staticmethod
+  def create_schedule_dataframe(filepath):
     """
-    Merge data from the master list into the cleaned dataframe.
+    This function reads an Excel file containing schedule data from multiple sheets
+    and returns a consolidated DataFrame with formatted dates as columns.
 
-    Parameters:
-        cleaned_df (pd.DataFrame): The DataFrame to be cleaned.
-        master_list (pd.DataFrame): The master list DataFrame containing additional data.
+    Args:
+        filepath (str): Path to the Excel file containing schedule data.
 
     Returns:
-        pd.DataFrame: The cleaned DataFrame with merged data.
+        pandas.DataFrame: A DataFrame containing a consolidated schedule with 
+                          formatted dates as columns.
     """
 
-    # Initialize empty lists to store data for new columns
-    employee_name_column = []
-    employee_id_column = []
-    wb_work_number = []  # Corrected variable name from wb_work_numbe to wb_work_number
-    rag_column = []
-    work_location = []
-    lob_column = []
-    site_column = []
-    shift_column = []
-    leader_column = []
-    employer_column = []
-
-    # Iterate through each row of the cleaned dataframe
-    for index, row in cleaned_df.iterrows():
-        # Check if the 'WB Work Number' exists in the master list
-        if row['WB Work Number'] in master_list['WB Work Number'].values:
-            # Filter the master list based on matching 'WB Work Number'
-            value = master_list[master_list['WB Work Number'] == row['WB Work Number']].iloc[0]
-
-            # Extract and append data from the master list to respective columns
-            employee_name_column.append(value['Employee Name'])
-            employee_id_column.append(value['Employee Code (ID)'])
-            wb_work_number.append(row['WB Work Number'])  # Assuming you want to keep the original WB Work Number
-            rag_column.append(value['RAG'])
-            work_location.append(value['Work Location'])
-            lob_column.append(value['LOB'])
-            site_column.append(value['Site'])
-            shift_column.append(value['Shift'])
-            leader_column.append(value['Leader'])
-            employer_column.append(value['Employer'])
-        else:
-            # If 'WB Work Number' not found, append NaNs or placeholders as appropriate
-            employee_name_column.append(row['Name'])  # Assuming 'Name' exists in cleaned_df
-            employee_id_column.append(np.nan)
-            wb_work_number.append(row['WB Work Number'])  # Keeping the original WB Work Number
-            rag_column.append(np.nan)
-            work_location.append(np.nan)
-            lob_column.append(np.nan)
-            site_column.append(np.nan)
-            shift_column.append(np.nan)
-            leader_column.append(np.nan)
-            employer_column.append(np.nan)
-
-    # Add new columns to the cleaned dataframe
-    cleaned_df['Employee Name'] = employee_name_column
-    cleaned_df['EmployeeID'] = employee_id_column
-    cleaned_df['WB Work Number'] = wb_work_number  # Ensure this is correct according to your dataframe structure
-    cleaned_df['RAG'] = rag_column
-    cleaned_df['Work Location'] = work_location
-    cleaned_df['LOB'] = lob_column
-    cleaned_df['Shift'] = shift_column
-    cleaned_df['Site'] = site_column
-    cleaned_df['Leader'] = leader_column
-    cleaned_df['Employer'] = employer_column
-
-    # Select the last 9 columns
-    last_nine_columns = cleaned_df.iloc[:, -9:]
-
-    # Select the columns you want to keep (excluding the first 6 and the last 9 which are being moved)
-    remaining_columns = cleaned_df.iloc[:, 6:-9]
-
-    # Concatenate the last 9 columns with the remaining columns
-    new_df = pd.concat([last_nine_columns, remaining_columns], axis=1)
-
-    return new_df
-
-def process_schedule_data(file_path):
-    schedule_dates = pd.read_excel(file_path, sheet_name='RBC').iloc[0].values[6:]
+    # Read schedule dates from RBC sheet (assuming first row, column offset 6)
+    schedule_dates = pd.read_excel(filepath, sheet_name='RBC').iloc[0, 6:].tolist()
     formatted_dates = [date.strftime('%Y-%m-%d') for date in schedule_dates]
-    columns = ['i','No.','LOB','EmployeeID', 'WBWorkNumber', 'Name']
+
+    # Define column names including employee information and formatted dates
+    columns = ['Index', 'Employee Number', 'LOB', 'EmployeeID', 'Work Number', 'Name']
     columns.extend(formatted_dates)
 
-    rbc_df = pd.read_excel(file_path, sheet_name='RBC')
-    sliced_rbc = rbc_df[3:]
-    hsq_df = pd.read_excel(file_path, sheet_name='HSQ')
-    sliced_hsq = hsq_df[3:]
-    idn_df = pd.read_excel(file_path, sheet_name='IDN')
-    sliced_idn = idn_df[3:]
-    isa_df = pd.read_excel(file_path, sheet_name='ISA')
-    sliced_isa = isa_df[3:]
+    # Read data from each sheet (assuming data starts from row 3)
+    rbc_df = pd.read_excel(filepath, sheet_name='RBC')[3:]
+    hsq_df = pd.read_excel(filepath, sheet_name='HSQ')[3:]
+    idn_df = pd.read_excel(filepath, sheet_name='IDN')[3:]
+    isa_df = pd.read_excel(filepath, sheet_name='ISA')[3:]
 
-    df = pd.concat([sliced_rbc, sliced_hsq, sliced_idn, sliced_isa], ignore_index=True)
+    # Concatenate dataframes and set column names
+    df = pd.concat([rbc_df, hsq_df, idn_df, isa_df], ignore_index=True)
     df.columns = columns
 
-    for col in columns[6:]:
-      df[col] = df[col].str.replace(r'\s+', '', regex=True)
+    # Remove whitespaces from schedule date columns
+    for date_col in columns[6:]:
+      df[date_col] = df[date_col].str.replace(r'\s+', '', regex=True)
 
     return df
 
-def apply_codes(merged_df, sched_df):
+  @staticmethod
+  def generate_attendance_dataframe(filepath):
+    """
+    This function reads an attendance data Excel file and returns a DataFrame
+    with formatted dates as columns.
 
-  attendance_date_cols = list(merged_df.columns)[9:]
-  codes = ['TRN', 'HD','VL', 'ABSA', 'ABSU', 'NCNS', 'RDOT', 'RTWO', 'ATTRIT', 'SL', 'EL', 'BL', 'ML']
+    Args:
+        filepath (str): Path to the Excel file containing attendance data.
 
-  for index, row in sched_df.iterrows():
-    for date_col in attendance_date_cols:
-      if row['EmployeeID'] in merged_df['EmployeeID'].values:
-        if row[date_col] in codes:
-          existing_val = merged_df.loc[(merged_df['EmployeeID'] == row['EmployeeID']), date_col].values[0]
-          updated_val = f"{existing_val} ({row[date_col]})"
-          merged_df.loc[(merged_df['EmployeeID'] == row['EmployeeID']), date_col] = updated_val
+    Returns:
+        pandas.DataFrame: A DataFrame containing attendance data with formatted 
+                          dates as columns.
+    """
 
-  applied_codes_df = merged_df
+    # Read attendance data from the Excel file
+    attendance_df = pd.read_excel(filepath)
 
-  return applied_codes_df
+    # Extract dates from the first column using regular expressions
+    date_strings = re.findall(r'\d{4}-\d{2}-\d{2}', attendance_df.columns[0])
+    start_date = datetime.strptime(date_strings[0], '%Y-%m-%d')
+    end_date = datetime.strptime(date_strings[-1], '%Y-%m-%d')
 
-def clean_time(row):
-    # Apply the cleaning operation to each relevant column in the row
-    for col in row.index:
-        x = row[col]
-        # Ensure x is a string for string operations
-        if isinstance(x, str):
-            # Attempting to replace "外勤" with an empty string if present and strip whitespace
-            x = x.replace("外勤", "").strip()
+    # Generate a list of dates between start and end date (inclusive)
+    date_range = (end_date - start_date).days + 1
+    date_list = [(start_date + timedelta(days=i)).strftime('%Y-%m-%d') for i in range(date_range)]
 
-            # Split the string by newline and extract the first and last times after sorting them
-            times = x.split('\n')
+    # Select and copy data from the third row onwards
+    sliced_df = attendance_df[2:].copy()
 
-            # Checking the conditions and updating x accordingly
-            if x.count("\n") > 1 and ":" in x:
-                row[col] = f"{times[0]} - {times[-1]} (MUL)"
-            elif x.count("\n") == 1 and x.count(":") == 2:
-                row[col] = f"{times[0]} - {times[-1]}"
+    # Define column names including employee information and formatted dates
+    columns = ["Employee Name", "Attendance Group", "Department", "WB Work Number", "Position", "User ID"]
+    columns.extend(date_list)
 
-            elif x.count(":") == 1:
-                row[col] = f"{x} (MIS)"
+    # Set column names for the sliced dataframe
+    sliced_df.columns = columns
 
+    return sliced_df, date_list
+
+  @staticmethod
+  def incorporate_master_data(cleaned_df, master_list, date_list):
+    """
+    Merges employee information from the master list into the cleaned dataframe.
+
+    Args:
+        cleaned_df (pd.DataFrame): The DataFrame to be enriched with master data.
+        master_list (pd.DataFrame): The DataFrame containing additional employee information.
+
+    Returns:
+        pd.DataFrame: The enhanced DataFrame with merged employee data.
+    """
+
+    # Initialize lists to store data for new columns
+    employee_names = []  # Clearer variable name
+    employee_ids = []
+    work_numbers = []  # Consistent naming convention
+    rags = []
+    work_locations = []
+    lobs = []  # Abbreviation for Line of Business
+    sites = []
+    shifts = []
+    managers = []  # More descriptive name
+    employers = []
+
+    # Iterate through each row in the cleaned dataframe
+    for index, row in cleaned_df.iterrows():
+        work_number = row['WB Work Number']  # Store for clarity
+
+        # Check for matching work number in the master list
+        matching_record = master_list.loc[master_list['WB Work Number'] == work_number]
+
+        if not matching_record.empty:
+            # Extract data from the matching master record
+            employee_names.append(matching_record.iloc[0]['Employee Name'])
+            employee_ids.append(matching_record.iloc[0]['Employee Code (ID)'])
+            work_numbers.append(work_number)  # Reuse stored value
+            rags.append(matching_record.iloc[0]['RAG'])
+            work_locations.append(matching_record.iloc[0]['Work Location'])
+            lobs.append(matching_record.iloc[0]['LOB'])
+            sites.append(matching_record.iloc[0]['Site'])
+            shifts.append(matching_record.iloc[0]['Shift'])
+            managers.append(matching_record.iloc[0]['Leader'])
+            employers.append(matching_record.iloc[0]['Employer'])
+        else:
+            # Handle missing matches
+            employee_names.append(row.get('Employee Name'))  # Use 'Name' if available
+            employee_ids.append(np.nan)
+            work_numbers.append(work_number)
+            rags.append(np.nan)
+            work_locations.append(np.nan)
+            lobs.append(np.nan)
+            sites.append(np.nan)
+            shifts.append(np.nan)
+            managers.append(np.nan)
+            employers.append(np.nan)
+
+    # Add new columns to the cleaned dataframe
+    cleaned_df['Employee Name'] = employee_names
+    cleaned_df['EmployeeID'] = employee_ids
+    cleaned_df['WB Work Number'] = work_numbers  # Renamed for consistency
+    cleaned_df['RAG'] = rags
+    cleaned_df['Work Location'] = work_locations
+    cleaned_df['LOB'] = lobs
+    cleaned_df['Site'] = sites
+    cleaned_df['Shift'] = shifts
+    cleaned_df['Manager'] = managers
+    cleaned_df['Employer'] = employers
+
+    # Rearrange columns for clarity
+    new_column_order = ['Employee Name', 'EmployeeID', 'WB Work Number', 'RAG', 'Work Location',
+        'LOB', 'Site', 'Shift', 'Manager', 'Employer'] + date_list
+    
+    return cleaned_df[new_column_order]
+
+  @staticmethod
+  def update_attendance_codes(merged_df, schedule_df):
+    """
+    Updates attendance codes in the merged dataframe based on the schedule data.
+
+    Args:
+        merged_df (pd.DataFrame): The DataFrame containing merged employee and attendance data.
+        schedule_df (pd.DataFrame): The DataFrame containing employee schedule information.
+
+    Returns:
+        pd.DataFrame: The updated DataFrame with attendance codes potentially including schedule codes.
+    """
+
+    # Get a list of columns containing attendance dates
+    attendance_date_columns = list(merged_df.columns)[10:]
+
+    # Define a list of possible attendance codes
+    attendance_codes = ['TRN', 'HD', 'VL', 'ABSA', 'ABSU', 'NCNS', 'RDOT', 'RTWO', 'ATTRIT', 'SL', 'EL', 'BL', 'ML']
+
+    # Iterate through rows in the schedule dataframe
+    for index, row in schedule_df.iterrows():
+      wb_work_number = row['Work Number']
+      # Check if employee ID exists in the merged dataframe
+      if wb_work_number in merged_df['WB Work Number'].values:
+        for date_column in attendance_date_columns:
+          # Check if schedule code exists for the date
+          if row[date_column] in attendance_codes:
+            # Get existing attendance value for the employee and date
+            existing_value = merged_df.loc[(merged_df['WB Work Number'] == wb_work_number), date_column].values[0]
+            # Combine existing value with schedule code in parentheses
+            updated_value = f"{existing_value} ({row[date_column]})"
+            # Update the attendance code in the merged dataframe
+            merged_df.loc[(merged_df['WB Work Number'] == wb_work_number), date_column] = updated_value
+    return merged_df
+
+
+  # Function to clean time data in a row (helper function)
+  @staticmethod
+  def clean_time(row):
+      # Apply the cleaning operation to each relevant column in the row
+      for col in row.index:
+          x = row[col]
+          # Ensure x is a string for string operations
+          if isinstance(x, str):
+              # Attempting to replace "外勤" with an empty string if present and strip whitespace
+              x = x.replace("外勤", "").strip()
+
+              # Split the string by newline and extract the first and last times after sorting them
+              times = x.split('\n')
+
+              # Checking the conditions and updating x accordingly
+              if x.count("\n") > 1 and ":" in x:
+                  row[col] = f"{times[0]} - {times[-1]} (MUL)"
+              elif x.count("\n") == 1 and x.count(":") == 2:
+                  row[col] = f"{times[0]} - {times[-1]}"
+
+              elif x.count(":") == 1:
+                  row[col] = f"{x} (MIS)"
+
+              else:
+                  # If there's only one time, or no valid time, mark as missing
+                  row[col] = x
+          else:
+              # If x is NaN or not a string, it cannot be cleaned with string methods
+              if pd.isna(x):
+                  row[col] = np.nan
+      return row
+
+  @staticmethod
+  def analyze_attendance_time_differences(scheduled_in_time_str, scheduled_out_time_str, actual_in_time_str, actual_out_time_str):
+    """
+    Analyzes time differences between scheduled and actual attendance times,
+    generating attendance status codes.
+
+    Args:
+        scheduled_in_time_str (str): String representing scheduled check-in time.
+        scheduled_out_time_str (str): String representing scheduled check-out time.
+        actual_in_time_str (str): String representing actual check-in time.
+        actual_out_time_str (str): String representing actual check-out time.
+
+    Returns:
+        list: A list of unique attendance status codes (e.g., "(OT)", "(L)").
+    """
+
+    # Parse input strings into datetime objects
+    scheduled_in_time = datetime.strptime(scheduled_in_time_str, "%I:%M%p")
+    scheduled_out_time = datetime.strptime(scheduled_out_time_str, "%I:%M%p")
+    actual_in_time = datetime.strptime(actual_in_time_str, "%H:%M")
+    actual_out_time = datetime.strptime(actual_out_time_str, "%H:%M")
+
+    # Calculate time differences in minutes
+    calculate_time_difference = lambda actual, scheduled: (actual - scheduled).total_seconds() / 60
+
+    attendance_codes = []
+
+    # Analyze check-in status
+    check_in_difference = calculate_time_difference(actual_in_time, scheduled_in_time)
+    if check_in_difference <= -16:
+        attendance_codes.append("(OT)")  # Overtime
+    elif check_in_difference >= 1:
+        attendance_codes.append("(L)")  # Late
+
+    # Analyze check-out status
+    check_out_difference = calculate_time_difference(actual_out_time, scheduled_out_time)
+    if check_out_difference >= 16:
+        attendance_codes.append("(OT)")  # Overtime
+    elif check_out_difference <= -1:
+        attendance_codes.append("(L)")  # Early leave
+
+    return list(np.unique(attendance_codes))
+
+  @staticmethod
+  def merge_final_attendance_codes(self, dataframe_with_codes, schedule_dataframe):
+    """
+    Incorporates final attendance codes based on schedule information.
+
+    Args:
+        dataframe_with_codes (pd.DataFrame): DataFrame with existing attendance codes.
+        schedule_dataframe (pd.DataFrame): DataFrame containing schedule data.
+
+    Returns:
+        pd.DataFrame: DataFrame with final attendance codes applied.
+    """
+
+    attendance_date_columns = list(dataframe_with_codes.columns)[10:]
+
+    for index, schedule_row in schedule_dataframe.iterrows():
+      employee_work_number = schedule_row['Work Number']
+
+      if employee_work_number in dataframe_with_codes['WB Work Number'].values:
+        for date_column in attendance_date_columns:
+          schedule_value = schedule_row[date_column]
+          attendance_value = dataframe_with_codes.loc[dataframe_with_codes['WB Work Number'] == employee_work_number, date_column].values[0]
+
+          # Check for absence based on schedule
+          if pd.isnull(attendance_value) and not pd.isnull(schedule_value) and isinstance(schedule_value, str):
+            # Mark as absent if scheduled but no attendance
+            new_value = f"{attendance_value} (ABSENT)" if pd.isnull(attendance_value) else attendance_value
+            dataframe_with_codes.loc[dataframe_with_codes['WB Work Number'] == employee_work_number, date_column] = new_value
+
+          # Apply attendance time-based codes
+          elif isinstance(schedule_value, str) and isinstance(attendance_value, str) and schedule_value.count(":") == 2 and attendance_value.count(":") == 2:
+            # Extract time information from strings
+            scheduled_in_time_str = schedule_value[0:7]
+            scheduled_out_time_str = schedule_value[8:15]
+            actual_in_time_str = attendance_value[0:5]
+            actual_out_time_str = attendance_value[6:11]
+
+            # Analyze time differences and retrieve codes
+            applicable_codes = self.analyze_attendance_time_differences(scheduled_in_time_str, scheduled_out_time_str, actual_in_time_str, actual_out_time_str)
+
+            # Update value with applicable codes
+            if applicable_codes:
+              codes_string = ' '.join(applicable_codes)
+              new_value = f"{attendance_value} {codes_string}"
             else:
-                # If there's only one time, or no valid time, mark as missing
-                row[col] = x
-        else:
-            # If x is NaN or not a string, it cannot be cleaned with string methods
-            if pd.isna(x):
-                row[col] = np.nan
-    return row
+              new_value = attendance_value  # Keep existing value if no codes
 
-def compute_duration(start_time, end_time):
-    return end_time - start_time
+            dataframe_with_codes.loc[dataframe_with_codes['WB Work Number'] == employee_work_number, date_column] = new_value
 
-def operate_time(sched_in_str, sched_out_str, actual_in_str, actual_out_str):
+    return dataframe_with_codes
 
-  # Parsing input strings into datetime objects
-  sched_in = datetime.strptime(sched_in_str, "%I:%M%p")
-  sched_out = datetime.strptime(sched_out_str, "%I:%M%p")
-  actual_in = datetime.strptime(actual_in_str, "%H:%M")
-  actual_out = datetime.strptime(actual_out_str, "%H:%M")
-  
-  # Calculating differences in minutes
-  diff_in_minutes = lambda actual, sched: (actual - sched).total_seconds() / 60
-  
-  codes = []
-  
-  # Analyzing check-in status
-  if diff_in_minutes(actual_in, sched_in) <= -16:
-      codes.append("(OT)")
-  elif diff_in_minutes(actual_in, sched_in) >= 1:
-      codes.append("(L)")
-  
-  # Analyzing check-out status
-  if diff_in_minutes(actual_out, sched_out) >= 16:
-      codes.append("(OT)")
-  elif diff_in_minutes(actual_out, sched_out) <= -1:
-      codes.append("(L)")
+  @staticmethod
+  def transform_attendance_data(attendance_dataframe):
+    """
+    Reformats attendance data into a DataFrame with separate columns for employee details,
+    site, shift, manager, dates, time in, time out, and remarks.
 
-  return list(np.unique(codes))
+    Args:
+        attendance_dataframe (pd.DataFrame): DataFrame containing raw attendance data.
 
+    Returns:
+        pd.DataFrame: DataFrame with transformed and structured attendance information.
+    """
 
-def add_final_codes(applied_codes_df, sched_df):
-
-  attendance_date_cols = list(applied_codes_df.columns)[9:]
-
-  for index, sched_row in sched_df.iterrows():
-      for date_col in attendance_date_cols:
-          if sched_row['EmployeeID'] in applied_codes_df['EmployeeID'].values:
-              sched_val = sched_row[date_col]
-              attdn_val = applied_codes_df.loc[applied_codes_df['EmployeeID'] == sched_row['EmployeeID'], date_col].values[0]
-
-              # Check if attdn_val is not null and sched_val indicates presence or is scheduled
-              if pd.isnull(attdn_val) and not pd.isnull(sched_val) and isinstance(sched_val, str):
-                  # Mark as absent if there is a schedule but no attendance
-                  new_val = f"{attdn_val} (ABSENT)" if pd.isnull(attdn_val) else attdn_val
-                  applied_codes_df.loc[applied_codes_df['EmployeeID'] == sched_row['EmployeeID'], date_col] = new_val
-
-              # If both sched_val and attdn_val are properly formatted time strings
-              elif isinstance(sched_val, str) and isinstance(attdn_val, str) and sched_val.count(":") == 2 and attdn_val.count(":") == 2:
-                  # Convert to datetime objects for time comparisons
-
-                  sched_in_time_dt = sched_val[0:7]
-                  sched_out_time_dt = sched_val[8:15]
-                  actual_in_time_dt = attdn_val[0:5]
-                  actual_out_time_dt = attdn_val[6:11]
-
-                  # Call operate_time with datetime objects
-                  applicable_codes = operate_time(sched_in_time_dt, sched_out_time_dt, actual_in_time_dt, actual_out_time_dt)
-
-                  # Update only with applicable codes
-                  if applicable_codes:
-                      codes_str = ' '.join(applicable_codes)  # Convert list of codes to a single string
-                      new_val = f"{attdn_val} {codes_str}"
-                  else:
-                      new_val = attdn_val  # If no codes, keep existing value
-
-                  applied_codes_df.loc[applied_codes_df['EmployeeID'] == sched_row['EmployeeID'], date_col] = new_val
-  return applied_codes_df
-
-def apply_color(x):
-    # Initialize color as None for cases where x doesn't match any condition
-    color = None
-
-    # Ensure x is a string to safely use 'in' operation
-    if isinstance(x, str):
-        # Check for combinations of conditions first
-        if 'MUL' in x and 'OT' in x and 'L' in x:
-            color = "#A93226"
-        elif 'MUL' in x and 'UT' in x and 'L' in x:
-            color = "#E74C3C"
-        elif 'UT' in x and 'L' in x:
-            color = "#EC7063"
-        elif 'OT' in x and 'L' in x:
-            color = "Violet"
-        # Check for single conditions
-        elif 'ABSENT' in x:
-            color = "Red"
-        elif 'L' in x:
-            color = "Yellow"
-        elif 'MUL' in x:
-            color = "Gray"
-        elif 'MIS' in x:
-            color = "Pink"
-        elif 'OT' in x:
-            color = "Blue"
-        elif 'UT' in x:
-            color = "Orange"
-        # Return the appropriate style string based on the color
-        if color:
-            return f'background-color: {color}'
-        else:
-            return ''
-
-def reformat_df(attendance_df):
     # Prepare a list to hold the formatted data
-    formatted_data = []
-    
+    formatted_records = []
+
     # Regular expression to match time and remarks in parentheses
-    time_re = re.compile(r'(\d{2}:\d{2})(-(\d{2}:\d{2}))?(\(.*\))?')
-    
-    # Get the list of dates from the DataFrame columns
-    date_columns = attendance_df.columns[9:-2]  # Adjusted to exclude the last two columns
-    dates = [pd.to_datetime(date).date() for date in date_columns]
-    
-    # Iterate over each row in the DataFrame
-    for index, row in attendance_df.iterrows():
-        # Extract the employee's name and ID which are constant across the dates
-        employee_name = row['Employee Name']
-        employee_id = row['EmployeeID']
-        
-        # Iterate over each date to construct individual records
-        for date in dates:
-            # Initialize default values for time and remarks
-            time_in, time_out, remarks = None, None, None
-            # Extract the time information from the cell
-            time_data = row[str(date)]
-            
-            # Process time data if it's not NaN
-            if pd.notna(time_data):
-                time_string = str(time_data).strip()
-                match = time_re.match(time_string)
-                if match:
-                    time_in = match.group(1)
-                    time_out = match.group(3) if match.group(3) else None
-                    remarks = match.group(4) if match.group(4) else None
-                else:
-                    # If the format does not match, log the entire string as a remark
-                    remarks = time_string
+    time_pattern = re.compile(r'(\d{2}:\d{2})(-(\d{2}:\d{2}))?(\(.*\))?')
 
-            # Append the data to the formatted data list
-            formatted_data.append({
-                'Date': date,
-                'Employee Name': employee_name,
-                'Employee ID': employee_id,
-                'Time In': time_in,
-                'Time Out': time_out,
-                'Remarks': remarks
-            })
-    
-    # Convert the formatted data into a DataFrame
-    formatted_df = pd.DataFrame(formatted_data)
-    
-    return formatted_df
+    # Extract a list of dates from column names (excluding the last two columns)
+    date_columns = attendance_dataframe.columns[10:]
+    attendance_dates = [pd.to_datetime(date).date() for date in date_columns]
 
-def count_multiple_log(x):
-    if isinstance(x, str):
-        return ('(MUL)' in x)
-    else:
-        return False  # Return False for non-string values
+    # Iterate through each row in the DataFrame
+    for index, data_row in attendance_dataframe.iterrows():
+      # Extract employee details
+      employee_name = data_row['Employee Name']
+      employee_id = data_row['EmployeeID']
+      work_number = data_row['WB Work Number']
+      lob = data_row['LOB']
+      employee_site = data_row['Site']
+      employee_shift = data_row['Shift']
+      team_leader = data_row['Manager']
 
-def count_missed_punch(x):
-    if isinstance(x, str):
-        return ('(MIS)' in x)
-    else:
-        return False  # Return False for non-string values
+      # Iterate over each date to construct individual records
+      for attendance_date in attendance_dates:
+        # Initialize placeholders for time and remarks
+        in_time, out_time, comments = None, None, None
 
-def count_logs(df):
-    # Apply count_no_log function to relevant columns and assign result to 'No Log Count' column
-    df['Multiple Logs Count'] = df.iloc[:, 9:].applymap(count_multiple_log).sum(axis=1)
-    
-    # Apply count_missed_punch function to relevant columns and assign result to 'Missed Punch Count' column
-    df['Missed Punch Count'] = df.iloc[:, 9:].applymap(count_missed_punch).sum(axis=1)
-    
-    # Sort and return the DataFrames
-    mul_sorted = df[['Employee Name', 'Multiple Logs Count']].sort_values(by='Multiple Logs Count', ascending=False)
-    mis_sorted = df[['Employee Name', 'Missed Punch Count']].sort_values(by='Missed Punch Count', ascending=False)
-    
-    return mul_sorted, mis_sorted
+        # Extract time data from the current date's cell
+        time_data = data_row[str(attendance_date)]
+
+        # Process time data if it's not missing
+        if pd.notna(time_data):
+          time_string = str(time_data).strip()
+          match = time_pattern.match(time_string)
+          if match:
+            in_time = match.group(1)
+            out_time = match.group(3) if match.group(3) else None
+            comments = match.group(4) if match.group(4) else None
+          else:
+            # If format doesn't match, consider entire string as a comment
+            comments = time_string
+
+        # Append the structured data to the formatted records list
+        formatted_records.append({
+            'Date': attendance_date,
+            'Employee Name': employee_name,
+            'Employee ID': employee_id,
+            'WB Work Number': work_number,
+            'LOB': lob,
+            'Site': employee_site,
+            'Shift': employee_shift,
+            'Manager': team_leader,
+            'Time In': in_time,
+            'Time Out': out_time,
+            'Remarks': comments
+        })
+
+    # Convert the formatted records list into a DataFrame
+    formatted_dataframe = pd.DataFrame(formatted_records)
+
+    return formatted_dataframe
+
+class AnalysisUtils:
+  @staticmethod
+  def metric_count(data_frame):
+    """Counts the occurrences of specific codes in the 'Remarks' column of a DataFrame.
+
+    Args:
+        data_frame (pandas.DataFrame): The DataFrame containing manager and code information.
+
+    Returns:
+        tuple: A tuple containing the counts of 'MIS', 'MUL', 'ABSENT', and 'L' code occurrences.
+    """
+
+    missing_information_count = data_frame['Remarks'].str.contains('(MIS)', case=False).sum()
+    multiple_occurrence_count = data_frame['Remarks'].str.contains('(MUL)', case=False).sum()
+    absent_count = data_frame['Remarks'].str.contains('(ABSENT)', case=False).sum()
+    late_count = data_frame['Remarks'].str.contains('(L)', case=False).sum()
+
+    return missing_information_count, multiple_occurrence_count, absent_count, late_count
 
 
-def find_duplicates_by_wb_work_number(df):
-    # Drop rows with null values in 'WB Work Number' column
-    df_cleaned = df.dropna(subset=['WBWorkNumber'])
-    
-    # Identify duplicated rows based on 'WB Work Number'
-    duplicated_rows = df_cleaned[df_cleaned.duplicated(subset='WBWorkNumber', keep=False)]
-    
-    return duplicated_rows[['Name', 'WBWorkNumber']]
+  @staticmethod
+  def count_codes_per_manager(data_frame):
+      """Counts the occurrences of specific codes for each manager in the DataFrame.
+
+      Args:
+          data_frame (pandas.DataFrame): The DataFrame containing manager and code information.
+
+      Returns:
+          pandas.DataFrame: A DataFrame with columns for manager, code status, and count.
+      """
+
+      managers = []
+      code_statuses = []
+      code_counts = []
+
+      for manager_name in data_frame['Manager'].unique():
+          for code_status in ['(ABSENT)', '(MUL)', '(MIS)', '(L)']:
+              count_of_occurrences = data_frame.loc[
+                  data_frame['Manager'] == manager_name
+              ]['Remarks'].str.contains(code_status).sum()
+              managers.append(manager_name)
+              code_statuses.append(code_status)
+              code_counts.append(count_of_occurrences)
+
+      summary_data_frame = pd.DataFrame({
+          'Manager': managers,
+          'Status': code_statuses,
+          'Count': code_counts
+      })
+
+      return summary_data_frame
+  
+  @staticmethod
+  def count_code_per_date(df):
+
+    date_list = []
+    code_list = []
+    code_counts = []
+    for date in df['Date'].unique():
+      for code_remarks in ['(ABSENT)', '(MUL)', '(MIS)', '(L)']:
+        count = df.loc[df['Date'] == date]['Remarks'].str.contains(code_remarks).sum()
+        date_list.append(date)
+        code_list.append(code_remarks)
+        code_counts.append(count)
+
+    count_df = pd.DataFrame({
+        'Date': date_list,
+        'Status': code_list,
+        'Count': code_counts
+    })
+
+    return count_df
+
+
+  @staticmethod
+  def plot_code_occurrence_by_date(data_frame, code_status):
+    """Plots the daily occurrences of a specific code status in a DataFrame.
+
+    Args:
+        data_frame (pandas.DataFrame): The DataFrame containing code status and date information.
+        code_status (str): The specific code status to plot (e.g., '(L)' for Late).
+
+    Returns:
+        plotly.graph_objects.Figure: A plotly figure representing the code occurrences over time.
+    """
+
+    code_descriptions = {
+        '(L)': 'Late',
+        '(MUL)': 'Multiple Punches',
+        '(MIS)': 'Missed Punch',
+        '(ABSENT)': 'Absent'
+    }
+
+    peak_count = data_frame.loc[data_frame['Status'] == code_status]['Count'].max()
+    peak_date = data_frame.loc[data_frame['Count'] == peak_count]['Date'].values[0]
+
+    figure = px.line(
+        data_frame.loc[data_frame['Status'] == code_status],
+        x="Date",
+        y="Count",
+        markers=True,
+        title=f"When do the most {code_descriptions[code_status]} entries occur?<br>"
+              f"<sup>Peak: {peak_count} occurrences in {peak_date}</sup>"
+    )
+
+    return figure
+  
+  @staticmethod
+  def plot_leaders_by_code_occurrence(data_frame, code_status):
+      """Plots a bar chart showing leaders with the most occurrences of a specific code.
+
+      Args:
+          data_frame (pandas.DataFrame): The DataFrame containing code status, manager, and count information.
+          code_status (str): The specific code status to plot (e.g., '(L)' for Late).
+
+      Returns:
+          plotly.graph_objects.Figure: A plotly figure representing the leader distribution for the code.
+      """
+
+      code_descriptions = {
+          '(L)': 'Late',
+          '(MUL)': 'Multiple Punches',
+          '(MIS)': 'Missed Punch',
+          '(ABSENT)': 'Absent'
+      }
+
+      filtered_data = data_frame.loc[data_frame['Status'] == code_status]
+      sorted_data = filtered_data.sort_values(by='Count', ascending=True)
+
+      figure = px.bar(
+          sorted_data,
+          x="Count",
+          y="Manager",
+          orientation='h',
+          title=f"Who are responsible for records of {code_descriptions[code_status]}?<br>"
+                f"<sup>Leaders with the Most {code_descriptions[code_status]} Employees</sup>"
+      )
+
+      return figure
+
