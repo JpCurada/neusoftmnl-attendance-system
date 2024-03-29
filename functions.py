@@ -144,7 +144,7 @@ class CleaningUtils:
 
     # Iterate through each row in the cleaned dataframe
     for index, row in cleaned_df.iterrows():
-        extracted_digits = re.findall(r'\d+', row['WB Work Number'])
+        extracted_digits = re.findall(r'\d+', str(row.get('WB Work Number', '')))
         digits = ''.join(extracted_digits)
         work_number = 'WB' + digits  # Store for clarity
 
