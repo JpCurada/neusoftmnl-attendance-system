@@ -116,7 +116,7 @@ class CleaningUtils:
     sliced_df.columns = columns
 
     return sliced_df, date_list
-
+  
   @staticmethod
   def incorporate_master_data(cleaned_df, master_list, date_list):
     """
@@ -144,7 +144,9 @@ class CleaningUtils:
 
     # Iterate through each row in the cleaned dataframe
     for index, row in cleaned_df.iterrows():
-        work_number = row['WB Work Number']  # Store for clarity
+        extracted_digits = re.findall(r'\d+', row['WB Work Number'])
+        digits = ''.join(extracted_digits)
+        work_number = 'WB' + digits  # Store for clarity
 
         # Check for matching work number in the master list
         matching_record = master_list.loc[master_list['WB Work Number'] == work_number]
