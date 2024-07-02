@@ -94,7 +94,7 @@ class CleaningUtils:
     """
 
     # Read attendance data from the Excel file
-    attendance_df = pd.read_excel(filepath, sheet_name='打卡时间')
+    attendance_df = pd.read_excel(filepath)
 
     # Extract dates from the first column using regular expressions
     date_strings = re.findall(r'\d{4}-\d{2}-\d{2}', attendance_df.columns[0])
