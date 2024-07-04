@@ -281,8 +281,8 @@ class CleaningUtils:
     # Parse input strings into datetime objects
     scheduled_in_time = datetime.strptime(scheduled_in_time_str, "%I:%M%p")
     scheduled_out_time = datetime.strptime(scheduled_out_time_str, "%I:%M%p")
-    actual_in_time = datetime.strptime(actual_in_time_str, "%I:%M%p")
-    actual_out_time = datetime.strptime(actual_out_time_str, "%I:%M%p")
+    actual_in_time = datetime.strptime(actual_in_time_str, "%H:%M")
+    actual_out_time = datetime.strptime(actual_out_time_str, "%H:%M")
 
     # Calculate time differences in minutes
     calculate_time_difference = lambda actual, scheduled: (actual - scheduled).total_seconds() / 60
