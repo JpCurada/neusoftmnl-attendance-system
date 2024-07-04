@@ -279,11 +279,6 @@ class CleaningUtils:
     """
 
     # Parse input strings into datetime objects
-    scheduled_in_time_str = scheduled_in_time_str.strip()
-    scheduled_out_time_str = scheduled_out_time_str.strip()
-    actual_in_time_str = actual_in_time_str.strip()
-    actual_out_time_str = actual_out_time_str.strip()
-  
     scheduled_in_time = datetime.strptime(scheduled_in_time_str, "%I:%M%p")
     scheduled_out_time = datetime.strptime(scheduled_out_time_str, "%I:%M%p")
     actual_in_time = datetime.strptime(actual_in_time_str, "%I:%M%p")
