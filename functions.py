@@ -211,7 +211,7 @@ class CleaningUtils:
     attendance_date_columns = list(merged_df.columns)[10:]
 
     # Define a list of possible attendance codes
-    attendance_codes = ['TRN', 'HD', 'VL', 'ABSA', 'ABSU', 'NCNS', 'RDOT', 'RTWO', 'ATTRIT', 'SL', 'EL', 'BL', 'ML', 'OFF']
+    attendance_codes = ['TRN', 'HD', 'VL', 'ABSA', 'ABSU', 'NCNS', 'RDOT', 'RTWO', 'ATTRIT', 'SL', 'EL', 'BL', 'ML', 'OFF', 'SUSPENDED']
 
     # Iterate through rows in the schedule dataframe
     for index, row in schedule_df.iterrows():
