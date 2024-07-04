@@ -68,9 +68,9 @@ class CleaningUtils:
     hsq_df = pd.read_excel(filepath, sheet_name='HSQ')[3:]
     idn_df = pd.read_excel(filepath, sheet_name='IDN')[3:]
     isa_df = pd.read_excel(filepath, sheet_name='ISA')[3:]
-    bz_df = pd.read_excel(filepath, sheet_name='BZ')[3:]
+    # bz_df = pd.read_excel(filepath, sheet_name='BZ')[3:]
     # Concatenate dataframes and set column names
-    df = pd.concat([rbc_df, hsq_df, idn_df, isa_df, bz_df], ignore_index=True)
+    df = pd.concat([rbc_df, hsq_df, idn_df, isa_df], ignore_index=True)
     df.columns = columns
 
     # Remove whitespaces from schedule date columns
