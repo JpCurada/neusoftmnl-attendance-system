@@ -39,11 +39,11 @@ if attendance_file is not None and master_list_file is not None and schedule_fil
         master_list_df = CleaningUtils.create_master_employee_list(master_list_file)
         sched_df = CleaningUtils.create_schedule_dataframe(schedule_file)
         attendance_df, date_list = CleaningUtils.generate_attendance_dataframe(attendance_file)
-        st.dataframe(attendance_df)
+
         merged_df = CleaningUtils.incorporate_master_data(attendance_df, master_list_df, date_list)
-        st.dataframe( merged_df)
+
         applied_codes_df = CleaningUtils.update_attendance_codes(merged_df, sched_df)
-        st.dataframe( applied_codes_df)
+
 
         # Clean time data in attendance date columns using the helper function
         applied_codes_df.iloc[:, 10:] = applied_codes_df.iloc[:, 10:].apply(CleaningUtils.clean_time, axis=1)
