@@ -334,6 +334,12 @@ class CleaningUtils:
 
           # Apply attendance time-based codes
           elif isinstance(schedule_value, str) and isinstance(attendance_value, str) and schedule_value.count(":") == 2 and attendance_value.count(":") == 2:
+            
+            st.caption(f"{employee_work_number}")
+            st.caption(f"{date_column}")
+            st.caption(f"{schedule_value}")
+            st.caption(f"{schedule_value}")
+            st.caption(f"{attendance_value}")
             # Extract time information from strings
             scheduled_in_time_str = schedule_value[0:7]
             scheduled_out_time_str = schedule_value[8:15]
