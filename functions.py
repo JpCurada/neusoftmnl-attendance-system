@@ -4,6 +4,7 @@ import numpy as np
 from datetime import datetime, timedelta
 from PIL import Image
 import re 
+import streamlit as st
 
 import warnings
 warnings.simplefilter("ignore")
@@ -281,7 +282,7 @@ class CleaningUtils:
           actual_in_time = datetime.strptime(actual_in_time_str, "%H:%M")
           actual_out_time = datetime.strptime(actual_out_time_str, "%H:%M")
       except ValueError as e:
-          print(f"Error parsing times - scheduled_in: {scheduled_in_time_str}, scheduled_out: {scheduled_out_time_str}, actual_in: {actual_in_time_str}, actual_out: {actual_out_time_str}")
+          st.caption(f"Error parsing times - scheduled_in: {scheduled_in_time_str}, scheduled_out: {scheduled_out_time_str}, actual_in: {actual_in_time_str}, actual_out: {actual_out_time_str}")
           raise e
   
       calculate_time_difference = lambda actual, scheduled: (actual - scheduled).total_seconds() / 60
