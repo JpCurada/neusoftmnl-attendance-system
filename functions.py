@@ -269,46 +269,36 @@ class CleaningUtils:
                   row[col] = np.nan
       return row
 
-  @staticmethod
-  def analyze_attendance_time_differences(scheduled_in_time_str, scheduled_out_time_str, actual_in_time_str, actual_out_time_str):
+@staticmethod
+def analyze_attendance_time_differences(scheduled_in_time_str, scheduled_out_time_str, actual_in_time_str, actual_out_time_str):
     """
     Analyzes time differences between scheduled and actual attendance times,
     generating attendance status codes.
-
-    Args:
-        scheduled_in_time_str (str): String representing scheduled check-in time.
-        scheduled_out_time_str (str): String representing scheduled check-out time.
-        actual_in_time_str (str): String representing actual check-in time.
-        actual_out_time_str (str): String representing actual check-out time.
-
-    Returns:
-        list: A list of unique attendance status codes (e.g., "(OT)", "(L)").
     """
+    try:
+        scheduled_in_time = datetime.strptime(scheduled_in_time_str, "%I:%M%p")
+        scheduled_out_time = datetime.strptime(scheduled_out_time_str, "%I:%M%p")
+        actual_in_time = datetime.strptime(actual_in_time_str, "%H:%M")
+        actual_out_time = datetime.strptime(actual_out_time_str, "%H:%M")
+    except ValueError as e:
+        print(f"Error parsing times - scheduled_in: {scheduled_in_time_str}, scheduled_out: {scheduled_out_time_str}, actual_in: {actual_in_time_str}, actual_out: {actual_out_time_str}")
+        raise e
 
-    # Parse input strings into datetime objects
-    scheduled_in_time = datetime.strptime(scheduled_in_time_str, "%I:%M%p")
-    scheduled_out_time = datetime.strptime(scheduled_out_time_str, "%I:%M%p")
-    actual_in_time = datetime.strptime(actual_in_time_str, "%H:%M")
-    actual_out_time = datetime.strptime(actual_out_time_str, "%H:%M")
-
-    # Calculate time differences in minutes
     calculate_time_difference = lambda actual, scheduled: (actual - scheduled).total_seconds() / 60
 
     attendance_codes = []
 
-    # Analyze check-in status
     check_in_difference = calculate_time_difference(actual_in_time, scheduled_in_time)
     if check_in_difference <= -16:
-        attendance_codes.append("(OT)")  # Overtime
+        attendance_codes.append("(OT)")
     elif check_in_difference >= 1:
-        attendance_codes.append("(L)")  # Late
+        attendance_codes.append("(L)")
 
-    # Analyze check-out status
     check_out_difference = calculate_time_difference(actual_out_time, scheduled_out_time)
     if check_out_difference >= 16:
-        attendance_codes.append("(OT)")  # Overtime
+        attendance_codes.append("(OT)")
     elif check_out_difference <= -1:
-        attendance_codes.append("(L)")  # Early leave
+        attendance_codes.append("(L)")
 
     return list(np.unique(attendance_codes))
 
