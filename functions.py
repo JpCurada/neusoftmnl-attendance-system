@@ -269,38 +269,38 @@ class CleaningUtils:
                   row[col] = np.nan
       return row
 
-@staticmethod
-def analyze_attendance_time_differences(scheduled_in_time_str, scheduled_out_time_str, actual_in_time_str, actual_out_time_str):
-    """
-    Analyzes time differences between scheduled and actual attendance times,
-    generating attendance status codes.
-    """
-    try:
-        scheduled_in_time = datetime.strptime(scheduled_in_time_str, "%I:%M%p")
-        scheduled_out_time = datetime.strptime(scheduled_out_time_str, "%I:%M%p")
-        actual_in_time = datetime.strptime(actual_in_time_str, "%H:%M")
-        actual_out_time = datetime.strptime(actual_out_time_str, "%H:%M")
-    except ValueError as e:
-        print(f"Error parsing times - scheduled_in: {scheduled_in_time_str}, scheduled_out: {scheduled_out_time_str}, actual_in: {actual_in_time_str}, actual_out: {actual_out_time_str}")
-        raise e
-
-    calculate_time_difference = lambda actual, scheduled: (actual - scheduled).total_seconds() / 60
-
-    attendance_codes = []
-
-    check_in_difference = calculate_time_difference(actual_in_time, scheduled_in_time)
-    if check_in_difference <= -16:
-        attendance_codes.append("(OT)")
-    elif check_in_difference >= 1:
-        attendance_codes.append("(L)")
-
-    check_out_difference = calculate_time_difference(actual_out_time, scheduled_out_time)
-    if check_out_difference >= 16:
-        attendance_codes.append("(OT)")
-    elif check_out_difference <= -1:
-        attendance_codes.append("(L)")
-
-    return list(np.unique(attendance_codes))
+  @staticmethod
+  def analyze_attendance_time_differences(scheduled_in_time_str, scheduled_out_time_str, actual_in_time_str, actual_out_time_str):
+      """
+      Analyzes time differences between scheduled and actual attendance times,
+      generating attendance status codes.
+      """
+      try:
+          scheduled_in_time = datetime.strptime(scheduled_in_time_str, "%I:%M%p")
+          scheduled_out_time = datetime.strptime(scheduled_out_time_str, "%I:%M%p")
+          actual_in_time = datetime.strptime(actual_in_time_str, "%H:%M")
+          actual_out_time = datetime.strptime(actual_out_time_str, "%H:%M")
+      except ValueError as e:
+          print(f"Error parsing times - scheduled_in: {scheduled_in_time_str}, scheduled_out: {scheduled_out_time_str}, actual_in: {actual_in_time_str}, actual_out: {actual_out_time_str}")
+          raise e
+  
+      calculate_time_difference = lambda actual, scheduled: (actual - scheduled).total_seconds() / 60
+  
+      attendance_codes = []
+  
+      check_in_difference = calculate_time_difference(actual_in_time, scheduled_in_time)
+      if check_in_difference <= -16:
+          attendance_codes.append("(OT)")
+      elif check_in_difference >= 1:
+          attendance_codes.append("(L)")
+  
+      check_out_difference = calculate_time_difference(actual_out_time, scheduled_out_time)
+      if check_out_difference >= 16:
+          attendance_codes.append("(OT)")
+      elif check_out_difference <= -1:
+          attendance_codes.append("(L)")
+  
+      return list(np.unique(attendance_codes))
 
   @staticmethod
   def merge_final_attendance_codes(self, dataframe_with_codes, schedule_dataframe):
