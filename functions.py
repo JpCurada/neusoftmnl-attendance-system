@@ -282,7 +282,7 @@ class CleaningUtils:
           actual_in_time = datetime.strptime(actual_in_time_str, "%H:%M")
           actual_out_time = datetime.strptime(actual_out_time_str, "%H:%M")
       except ValueError as e:
-          st.caption(f"Error parsing times - scheduled_in: {scheduled_in_time_str}, scheduled_out: {scheduled_out_time_str}, actual_in: {actual_in_time_str}, actual_out: {actual_out_time_str}")
+          st.warning(f"Error parsing times - scheduled_in: {scheduled_in_time_str}, scheduled_out: {scheduled_out_time_str}, actual_in: {actual_in_time_str}, actual_out: {actual_out_time_str}")
           raise e
   
       calculate_time_difference = lambda actual, scheduled: (actual - scheduled).total_seconds() / 60
@@ -334,7 +334,6 @@ class CleaningUtils:
 
           # Apply attendance time-based codes
           elif isinstance(schedule_value, str) and isinstance(attendance_value, str) and schedule_value.count(":") == 2 and attendance_value.count(":") == 2:
-            st.caption(f"{list(schedule_value)} | {employee_work_number} | {date_column}")
             
             # Extract time information from strings
             scheduled_in_time_str = schedule_value[0:7]
