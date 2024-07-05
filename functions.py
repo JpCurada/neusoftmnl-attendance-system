@@ -66,11 +66,11 @@ class CleaningUtils:
     # Read data from each sheet (assuming data starts from row 3)
     rbc_df = pd.read_excel(filepath, sheet_name='RBC')[3:]
     hsq_df = pd.read_excel(filepath, sheet_name='HSQ')[3:]
-    idn_df = pd.read_excel(filepath, sheet_name='IDN')[3:]
+    # idn_df = pd.read_excel(filepath, sheet_name='IDN')[3:]
     isa_df = pd.read_excel(filepath, sheet_name='ISA')[3:]
     # bz_df = pd.read_excel(filepath, sheet_name='BZ')[3:]
     # Concatenate dataframes and set column names
-    df = pd.concat([rbc_df, hsq_df, idn_df, isa_df], ignore_index=True)
+    df = pd.concat([rbc_df, hsq_df, isa_df], ignore_index=True)
     df.columns = columns
 
     # Remove whitespaces from schedule date columns
@@ -213,10 +213,10 @@ class CleaningUtils:
     # Define a list of possible attendance codes
     attendance_codes = [
         'TRN', 'HD', 'VL', 'ABSA', 'ABSU', 'NCNS', 'RDOT', 'RTWO', 'ATTRIT', 'SL', 
-        'EL', 'BL', 'ML', 'OFF', 'SUSPENDED', 'ABSENT-A', 'Half Day', 'LATE', 
-        'ABSENT', 'ABSENT-U', 'ATTRI', 'CHANGE OFF', 'FLEXI', 'HOLIDAY OFF', 
-        'LEAVE', 'RESIGNED', 'SUPPORT', 'TERMINATED', 'TRANSFER IN AE CALLS', 
-        'TRANSFER TO FE', 'TRANSFERED'
+        'EL', 'BL', 'ML', 'OFF', 'SUSPENDED', 'ABSENT-A', 'HalfDay', 'LATE', 
+        'ABSENT', 'ABSENT-U', 'ATTRIT', 'CHANGEOFF', 'FLEXI', 'HOLIDAYOFF', 
+        'LEAVE', 'RESIGNED', 'SUPPORT', 'TERMINATED', 'TRANSFERINAECALLS', 
+        'TRANSFERTOFE', 'TRANSFERED'
     ]
 
     
