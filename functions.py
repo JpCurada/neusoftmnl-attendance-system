@@ -211,8 +211,15 @@ class CleaningUtils:
     attendance_date_columns = list(merged_df.columns)[10:]
 
     # Define a list of possible attendance codes
-    attendance_codes = ['TRN', 'HD', 'VL', 'ABSA', 'ABSU', 'NCNS', 'RDOT', 'RTWO', 'ATTRIT', 'SL', 'EL', 'BL', 'ML', 'OFF', 'SUSPENDED', 'ABSENT-A', 'Half Day', 'LATE']
+    attendance_codes = [
+        'TRN', 'HD', 'VL', 'ABSA', 'ABSU', 'NCNS', 'RDOT', 'RTWO', 'ATTRIT', 'SL', 
+        'EL', 'BL', 'ML', 'OFF', 'SUSPENDED', 'ABSENT-A', 'Half Day', 'LATE', 
+        'ABSENT', 'ABSENT-U', 'ATTRI', 'CHANGE OFF', 'FLEXI', 'HOLIDAY OFF', 
+        'LEAVE', 'RESIGNED', 'SUPPORT', 'TERMINATED', 'TRANSFER IN AE CALLS', 
+        'TRANSFER TO FE', 'TRANSFERED'
+    ]
 
+    
     # Iterate through rows in the schedule dataframe
     for index, row in schedule_df.iterrows():
       wb_work_number = row['Work Number']
@@ -220,7 +227,7 @@ class CleaningUtils:
       if wb_work_number in merged_df['WB Work Number'].values:
         for date_column in attendance_date_columns:
           # Check if schedule code exists for the date
-          if row[date_column] in attendance_codes:
+          if row[date_column].upper() in attendance_codes:
             # Get existing attendance value for the employee and date
             existing_value = merged_df.loc[(merged_df['WB Work Number'] == wb_work_number), date_column].values[0]
             # Combine existing value with schedule code in parentheses
