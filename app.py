@@ -52,6 +52,12 @@ if attendance_file is not None and master_list_file is not None and schedule_fil
         for col in applied_codes_df.columns[10:]:
             applied_codes_df[col] = applied_codes_df[col].str.replace(r'\s+', '', regex=True)
 
+        # Debugging: Print some values before the error line
+        st.caption("Before merging final attendance codes")
+        st.dataframe(applied_codes_df)
+       `st.caption("Before merging final attendance codes")
+        st.dataframe(sched_df)
+      
         cleaned_df = CleaningUtils.merge_final_attendance_codes(CleaningUtils, applied_codes_df, sched_df)
         grouped_df = CleaningUtils.transform_attendance_data(cleaned_df)
 
