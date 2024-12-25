@@ -1,10 +1,10 @@
 
 # Neusoft MNL Attendance Management System
 
-![image](https://github.com/user-attachments/assets/bb06533a-5e7f-4151-8c34-774f98943060)
-
-
 The Neusoft MNL Attendance Management System is a comprehensive Streamlit web application designed to automate the management and organization of attendance data for Neusoft employees. Utilizing data produced by DingTalk, this application transforms raw attendance data into a clear, understandable, and downloadable format. The system simplifies the attendance data management process, making it more efficient and less prone to human error.
+
+
+![image](https://github.com/user-attachments/assets/bb06533a-5e7f-4151-8c34-774f98943060)
 
 ## Features
 
